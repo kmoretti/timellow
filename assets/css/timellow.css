@@ -2383,12 +2383,14 @@ body.home .scrollload-content > .post-item:first-child {
     margin: 0 0 15px 0;
 }
 
+.post-detail-item .post-content img,
 .post-detail-content img {
     max-width: 100%;
     height: auto;
     border-radius: 6px;
     margin: 10px 0;
     display: block;
+    cursor: zoom-in;
 }
 
 .post-detail-content * {

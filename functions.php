@@ -3,7 +3,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TIMELLOW_THEME_VERSION', '1.0.10');
+define('TIMELLOW_THEME_VERSION', '1.0.11');
 define('TIMELLOW_DB_VERSION', '1.0.0');
 define('TIMELLOW_THEME_UPDATE_REPO', 'jkjoy/timellow');
 define('TIMELLOW_THEME_UPDATE_CACHE_KEY', 'timellow_theme_update_release');
@@ -1152,7 +1152,66 @@ function timellow_get_post_rendered_content($post = null)
         return '';
     }
 
-    return apply_filters('the_content', $post->post_content);
+    $content = apply_filters('the_content', $post->post_content);
+
+    return timellow_add_lightbox_to_content_images($content, $post->ID);
+}
+
+function timellow_add_lightbox_to_content_images($content, $post_id = 0)
+{
+    if (!is_string($content) || $content === '') {
+        return $content;
+    }
+
+    $post_id = absint($post_id);
+    $gallery_id = $post_id > 0 ? 'post-detail-' . $post_id : 'post-detail';
+
+    return preg_replace_callback(
+        '/<img\b[^>]*>/i',
+        function ($matches) use ($gallery_id) {
+            $img_tag = $matches[0];
+            $has_fancybox = preg_match('/\bdata-fancybox\b/i', $img_tag) === 1;
+            $has_data_src = preg_match('/\bdata-src\s*=/i', $img_tag) === 1;
+
+            if ($has_fancybox && $has_data_src) {
+                return $img_tag;
+            }
+
+            if (!preg_match('/\bsrc\s*=\s*("([^"]*)"|\'([^\']*)\'|([^\s"\'>]+))/i', $img_tag, $src_matches)) {
+                return $img_tag;
+            }
+
+            $src = '';
+            if (isset($src_matches[2]) && $src_matches[2] !== '') {
+                $src = $src_matches[2];
+            } elseif (isset($src_matches[3]) && $src_matches[3] !== '') {
+                $src = $src_matches[3];
+            } elseif (isset($src_matches[4])) {
+                $src = $src_matches[4];
+            }
+
+            $attributes = '';
+            if (!$has_fancybox) {
+                $attributes .= ' data-fancybox="' . esc_attr($gallery_id) . '"';
+            }
+            if (!$has_data_src) {
+                $attributes .= ' data-src="' . esc_url($src) . '"';
+            }
+            if ($attributes === '') {
+                return $img_tag;
+            }
+
+            $injected = rtrim($img_tag);
+            if (substr($injected, -2) === '/>') {
+                $injected = substr($injected, 0, -2) . $attributes . '>';
+            } else {
+                $injected = substr($injected, 0, -1) . $attributes . '>';
+            }
+
+            return $injected;
+        },
+        $content
+    );
 }
 
 function timellow_clean_position_fragment($value)
